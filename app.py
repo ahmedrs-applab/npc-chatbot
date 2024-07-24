@@ -1,11 +1,12 @@
 import traceback
 import asyncio
 import datetime
-from flask import Flask, request, Response, render_template
+from flask import Flask, request, Response, render_template, jsonify, send_from_directory
 from botbuilder.core import BotFrameworkAdapterSettings, TurnContext, BotFrameworkAdapter
 from botbuilder.schema import Activity, ActivityTypes
 from bot import MyBot
 from config import DefaultConfig
+import requests
 
 CONFIG = DefaultConfig()
 
@@ -60,6 +61,29 @@ def messages():
     if response:
         return Response(response.body, status=response.status, content_type="text/plain")
     return Response(status=201)
+
+# Route to generate Direct Line token
+@app.route("/generate_direct_line_token", methods=["POST"])
+def generate_direct_line_token():
+    direct_line_secret = CONFIG.DIRECT_LINE_SECRET  # Add your Direct Line Secret to the config
+    url = "https://directline.botframework.com/v3/directline/tokens/generate"
+    
+    headers = {
+        "Authorization": f"Bearer {direct_line_secret}"
+    }
+    
+    response = requests.post(url, headers=headers)
+    
+    if response.status_code == 200:
+        token = response.json().get("token")
+        return jsonify({"token": token})
+    else:
+        return jsonify({"error": "Failed to generate token"}), 500
+
+# Route to serve the HTML file
+@app.route("/")
+def index():
+    return send_from_directory('', 'index.html')
 
 if __name__ == "__main__":
     try:
